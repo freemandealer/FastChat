@@ -16,7 +16,7 @@ import os
 from typing import Generator, Optional, Union, Dict, List, Any
 
 import fastapi
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.security.http import HTTPAuthorizationCredentials, HTTPBearer
@@ -25,6 +25,9 @@ from pydantic import BaseSettings
 import shortuuid
 import tiktoken
 import uvicorn
+import tempfile
+from modelscope.pipelines import pipeline
+from modelscope.utils.constant import Tasks
 
 from fastchat.constants import (
     WORKER_API_TIMEOUT,
@@ -44,6 +47,8 @@ from fastchat.protocol.openai_api_protocol import (
     CompletionRequest,
     CompletionResponse,
     CompletionResponseChoice,
+    TranscriptionRequest,
+    TranscriptionResponse,
     DeltaMessage,
     CompletionResponseStreamChoice,
     CompletionStreamResponse,
@@ -770,7 +775,34 @@ async def create_chat_completion(request: APIChatCompletionRequest):
 ### END GENERAL API - NOT OPENAI COMPATIBLE ###
 
 
+async def do_transcript(file_path):
+    rec_result = g_inference_pipeline(audio_in=file_path)
+    return rec_result
+
+
+### FREEMAN API ###
+@app.post("/v1/audio/transcriptions", dependencies=[Depends(check_api_key)])
+async def transcriptions(file: UploadFile = File(...)):
+    tf = tempfile.NamedTemporaryFile(suffix='.wav')
+    content = await file.read()  # async read
+    tf.write(content)  # async write
+
+    result = await do_transcript(tf.name)
+    tf.close()
+
+    #ret_str =  "filename" + str(file.filename) + "content_type" + str(file.content_type) + "file_size" + str(len(file_content))
+    return TranscriptionResponse(
+            text = str(result)
+    )
+### END ###
+
+
 if __name__ == "__main__":
+    # init paraformer transcription model
+    g_inference_pipeline = pipeline(
+        task=Tasks.auto_speech_recognition,
+        model='damo/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-pytorch',)
+
     parser = argparse.ArgumentParser(
         description="FastChat ChatGPT-Compatible RESTful API server."
     )

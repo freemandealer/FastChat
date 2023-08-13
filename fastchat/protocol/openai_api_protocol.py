@@ -1,4 +1,5 @@
 from typing import Literal, Optional, List, Dict, Any, Union
+from fastapi import FastAPI, UploadFile, File
 
 import time
 
@@ -134,6 +135,14 @@ class EmbeddingsResponse(BaseModel):
     model: str
     usage: UsageInfo
 
+
+class TranscriptionRequest(BaseModel):
+    model: str
+    file: UploadFile
+
+
+class TranscriptionResponse(BaseModel):
+    text: str
 
 class CompletionRequest(BaseModel):
     model: str
