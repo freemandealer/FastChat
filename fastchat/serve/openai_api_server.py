@@ -21,7 +21,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.security.http import HTTPAuthorizationCredentials, HTTPBearer
 import httpx
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings
 import shortuuid
 import tiktoken
 import uvicorn
@@ -75,7 +75,7 @@ conv_template_map = {}
 class AppSettings(BaseSettings):
     # The address of the model controller.
     controller_address: str = "http://localhost:21001"
-    api_keys: List[str] = None
+    api_keys: List[str] = []
 
 
 app_settings = AppSettings()
@@ -790,7 +790,6 @@ async def transcriptions(file: UploadFile = File(...)):
     result = await do_transcript(tf.name)
     tf.close()
 
-    #ret_str =  "filename" + str(file.filename) + "content_type" + str(file.content_type) + "file_size" + str(len(file_content))
     return TranscriptionResponse(
             text = str(result)
     )
@@ -801,7 +800,8 @@ if __name__ == "__main__":
     # init paraformer transcription model
     g_inference_pipeline = pipeline(
         task=Tasks.auto_speech_recognition,
-        model='damo/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-pytorch',)
+        # model='damo/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-pytorch',)
+        model='iic/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-pytorch', model_revision="v2.0.4")
 
     parser = argparse.ArgumentParser(
         description="FastChat ChatGPT-Compatible RESTful API server."
